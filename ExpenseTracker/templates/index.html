@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Insight Generator 💰</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>💸 Expense Insight Generator</h1>
+        {% if greet %}
+            <p>{{ greet }}</p>
+        {% endif %}
+        <button id="mode-toggle" title="Toggle Dark Mode">🌙</button>
+    </header>
+
+    <main>
+        <!-- Add Expense Section -->
+        <section class="card">
+            <h2>Add New Expense</h2>
+            <form class="form" action="{{ url_for('add') }}" method="POST">
+                <input type="date" name="date" required>
+                <input type="text" name="category" placeholder="Category" required>
+                <input type="number" name="amount" placeholder="Amount (₹)" step="0.01" min="0" required>
+                <input type="text" name="description" placeholder="Description" required>
+                <button type="submit">➕ Add</button>
+            </form>
+        </section>
+
+        <!-- Summary Section -->
+        <section class="card">
+            <h2>Summary</h2>
+            {% if message %}
+                <p class="message">{{ message }}</p>
+            {% endif %}
+            <h3>Total Spent: ₹{{ total|default(0, true) }}</h3>
+            <canvas id="spendChart" width="300" height="300"></canvas>
+
+        </section>
+
+        <!-- Expense Table -->
+        <section class="card">
+            <h2>Expense Table</h2>
+            {% if expenses %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exp in expenses %}
+                    <tr>
+                        <td>{{ exp["Date"]|default('') }}</td>
+                        <td>{{ exp["Category"]|default('') }}</td>
+                        <td>₹{{ exp["Amount"]|default(0) }}</td>
+                        <td>{{ exp["Description"]|default('') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="{{ url_for('download') }}" class="btn">⬇️ Download CSV</a>
+            {% else %}
+            <p>No expenses recorded yet.</p>
+            {% endif %}
+        </section>
+    </main>
+
+    <footer>
+        <p>✨ Built by Ankit & Anurag with ❤️ | Smart Expense Insight ✨</p>
+    </footer>
+
+    <!-- Dark Mode & Chart Script -->
+    <script>
+        // Dark mode toggle
+        const modeBtn = document.getElementById('mode-toggle');
+        const darkMode = localStorage.getItem('darkMode') === 'true';
+        
+        // Set initial dark mode state
+        if (darkMode) {
+            document.body.classList.add('dark');
+            modeBtn.textContent = '☀️';
+        }
+
+        modeBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            const isDark = document.body.classList.contains('dark');
+            modeBtn.textContent = isDark ? '☀️' : '🌙';
+            localStorage.setItem('darkMode', isDark);
+        });
+
+        // Expense chart
+        const ctx = document.getElementById('spendChart');
+        if (ctx && window.expenses && window.expenses.length > 0) {
+            const categoryMap = new Map();
+            
+            // Aggregate amounts by category
+            window.expenses.forEach(exp => {
+                const category = exp.Category;
+                categoryMap.set(category, (categoryMap.get(category) || 0) + parseFloat(exp.Amount));
+            });
+
+            const labels = Array.from(categoryMap.keys());
+            const data = Array.from(categoryMap.values());
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            '#00bcd4', '#ff5722', '#4caf50', 
+                            '#ffc107', '#9c27b0', '#f44336',
+                            '#2196f3', '#ff9800', '#795548'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: document.body.classList.contains('dark') ? '#fff' : '#333'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
